@@ -1,0 +1,174 @@
+//
+//  MainMenuViewController.swift
+//  grayscale
+//
+//  Created by Lacy Rhoades on 7/28/16.
+//  Copyright © 2016 Lacy Rhoades. All rights reserved.
+//
+
+import UIKit
+
+class MainMenuViewController: UIViewController {
+    var scrollView = UIScrollView()
+    
+    // background
+    var backgroundImage = UIImageView()
+    
+    // pull-down menu
+    var galleryVC = GalleryVC()
+    var galleryView: UIView {
+        get {
+            return self.galleryVC.view
+        }
+    }
+    
+    // center view (mostly just clear)
+    var blankView = UIView()
+    
+    // pull-up menu
+    var configVC = FilterControlsViewController()
+    var configView: UIView! {
+        get {
+            return self.configVC.view
+        }
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        self.view.backgroundColor = UIColor.blackColor()
+        
+        self.backgroundImage.contentMode = .ScaleAspectFit
+        self.backgroundImage.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(self.backgroundImage)
+        
+        self.scrollView.bounces = false
+        self.scrollView.pagingEnabled = true
+        self.scrollView.delegate = self
+        self.scrollView.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(self.scrollView)
+        
+        self.galleryVC.selectionDelegate = self
+        self.galleryVC.embeddedScrollViewDelegate = self
+        self.galleryView.translatesAutoresizingMaskIntoConstraints = false
+        self.scrollView.addSubview(self.galleryView)
+        
+        self.addChildViewController(self.galleryVC)
+        self.galleryVC.didMoveToParentViewController(self)
+        
+        self.blankView.translatesAutoresizingMaskIntoConstraints = false
+        self.scrollView.addSubview(self.blankView)
+        
+        self.configView.translatesAutoresizingMaskIntoConstraints = false
+        self.scrollView.addSubview(self.configView)
+        
+        self.addChildViewController(self.configVC)
+        self.configVC.didMoveToParentViewController(self)
+        
+        self.setupConstraints(self.view.bounds.size)
+    }
+    
+    override func viewDidAppear(animated: Bool) {
+        self.galleryVC.reload()
+    }
+    
+    func setupConstraints(size: CGSize) {
+        let metrics = [
+            "margin": 0,
+            "height": size.height,
+            "width": size.width
+        ]
+        
+        let views = [
+            "backgroundImage": self.backgroundImage,
+            "scrollView": self.scrollView,
+            "galleryView": self.galleryView,
+            "blankView": self.blankView,
+            "configView": self.configView,
+            ]
+        
+        self.view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[backgroundImage]|", options: [], metrics: metrics, views: views))
+        self.view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("V:|[backgroundImage]|", options: [], metrics: metrics, views: views))
+        
+        self.view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[scrollView]|", options: [], metrics: metrics, views: views))
+        self.view.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("V:|[scrollView]|", options: [], metrics: metrics, views: views))
+        
+        self.scrollView.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[galleryView]|", options: [], metrics: metrics, views: views))
+        self.scrollView.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[blankView]|", options: [], metrics: metrics, views: views))
+        self.scrollView.addConstraints(NSLayoutConstraint.constraintsWithVisualFormat("H:|[configView]|", options: [], metrics: metrics, views: views))
+        
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.galleryView, attribute: .Width, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.width))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.blankView, attribute: .Width, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.width))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.configView, attribute: .Width, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.width))
+        
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.galleryView, attribute: .Height, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.height))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.blankView, attribute: .Height, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.height))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.configView, attribute: .Height, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: size.height))
+        
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.galleryView, attribute: .Top, relatedBy: .Equal, toItem: self.scrollView, attribute: .Top, multiplier: 1, constant: 0))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.blankView, attribute: .Top, relatedBy: .Equal, toItem: self.galleryView, attribute: .Bottom, multiplier: 1, constant: 0))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.configView, attribute: .Top, relatedBy: .Equal, toItem: self.blankView, attribute: .Bottom, multiplier: 1, constant: 0))
+        self.scrollView.addConstraint(NSLayoutConstraint(item: self.configView, attribute: .Bottom, relatedBy: .Equal, toItem: self.scrollView, attribute: .Bottom, multiplier: 1, constant: 0))
+    }
+    
+    override func viewWillAppear(animated: Bool) {
+        let height = self.view.bounds.height
+        let width = self.view.bounds.width
+        self.scrollView.contentSize = CGSize(width: width, height: 3 * height)
+        
+        self.scrollToCenter(false)
+        
+        self.unlock()
+    }
+    
+    override func prefersStatusBarHidden() -> Bool {
+        return true;
+    }
+    
+    override func supportedInterfaceOrientations() -> UIInterfaceOrientationMask {
+        return .Portrait
+    }
+    
+    override func shouldAutorotate() -> Bool {
+        return false
+    }
+}
+
+extension MainMenuViewController: UIScrollViewDelegate {
+    func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
+        if scrollView.contentOffset.y == 0.0 {
+            self.lock()
+        }
+    }
+}
+
+extension MainMenuViewController: EmbeddedScrollViewDelegate {
+    func lock() {
+        self.scrollView.scrollEnabled = false
+    }
+    
+    func unlock() {
+        self.scrollView.scrollEnabled = true
+    }
+    
+    func setContentOffset(offset: CGPoint) {
+        self.scrollView.contentOffset = offset
+    }
+    
+    func scrollToCenter(animated: Bool) {
+        let height = self.view.bounds.height
+        let centerOffset = CGPoint(x: 0, y: height)
+        self.scrollView.setContentOffset(centerOffset, animated: true)
+        self.unlock()
+    }
+
+}
+
+extension MainMenuViewController: GalleryPhotoSelectionDelegate {
+    func imageWasSelected(image: UIImage) {
+        self.scrollToCenter(true)
+        main_thread {
+            self.backgroundImage.image = image
+        }
+    }
+}
