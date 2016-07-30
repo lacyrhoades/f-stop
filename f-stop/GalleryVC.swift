@@ -31,9 +31,13 @@ class GalleryVC: UIViewController {
         self.view.transform = CGAffineTransformScale(self.view.transform, 1, -1)
         
         let layout = UICollectionViewFlowLayout()
+        layout.minimumLineSpacing = 8.0
+        layout.minimumInteritemSpacing = 8.0
+        layout.sectionInset = UIEdgeInsets(top: 8.0, left: 0, bottom: 8.0, right: 0)
         self.collectionView = UICollectionView(frame: self.view.bounds, collectionViewLayout: layout)
         self.collectionView.panGestureRecognizer.addTarget(self, action: #selector(collectionViewDidPan))
         self.collectionView.bounces = false
+        self.collectionView.showsVerticalScrollIndicator = false
         self.collectionView.backgroundColor = UIColor.clearColor()
         self.collectionView.delegate = self
         self.collectionView.dataSource = self
@@ -57,6 +61,7 @@ class GalleryVC: UIViewController {
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         self.assets = PHAsset.fetchAssetsWithMediaType(PHAssetMediaType.Image, options: fetchOptions)
+        PHPhotoLibrary.sharedPhotoLibrary().registerChangeObserver(self)
     }
     
     weak var embeddedScrollViewDelegate: EmbeddedScrollViewDelegate?
@@ -87,6 +92,20 @@ class GalleryVC: UIViewController {
         } else {
             pan.x = 0.0
             self.embeddedScrollViewDelegate?.setContentOffset(pan)
+        }
+    }
+    
+    func loadFirstImage() {
+        if self.assets.count > 0 {
+            if let asset = self.assets[0] as? PHAsset {
+                PHImageManager.defaultManager().requestImageDataForAsset(
+                    asset,
+                    options: nil, resultHandler: { (data, uti, orientation, info) in
+                        if let data = data, image = UIImage(data: data) {
+                            self.selectionDelegate?.imageWasSelected(image)
+                        }
+                })
+            }
         }
     }
 }
@@ -137,7 +156,14 @@ extension GalleryVC: UICollectionViewDataSource {
 
 extension GalleryVC: UICollectionViewDelegateFlowLayout {
     func collectionView(collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAtIndexPath indexPath: NSIndexPath) -> CGSize {
-        return CGSize(width: collectionView.frame.size.width, height: 200.0)
+        return CGSize(width: collectionView.frame.size.width - 16.0, height: 200.0)
+    }
+}
+
+extension GalleryVC: PHPhotoLibraryChangeObserver {
+    func photoLibraryDidChange(changeInstance: PHChange) {
+        self.reload()
+        self.loadFirstImage()
     }
 }
 

@@ -1,5 +1,5 @@
 //
-//  FilterControlsViewController.swift
+//  FilterControlsVC.swift
 //  grayscale
 //
 //  Created by Lacy Rhoades on 7/28/16.
@@ -8,43 +8,30 @@
 
 import UIKit
 
-enum EffectControlType {
-    case Slider
-}
-
-struct Effect {
-    var controlType: EffectControlType = .Slider
-}
-
-class FilterControlsViewController: UIViewController {
-    var effects = [
-        Effect(controlType: .Slider),
-        Effect(controlType: .Slider),
-        Effect(controlType: .Slider),
-        Effect(controlType: .Slider),
-        Effect(controlType: .Slider)
-    ]
+class FilterControlsVC: UIViewController {
     
     var effectsWrapperView = UIView()
     
     override func viewDidLoad() {
         self.view.backgroundColor = UIColor.clearColor()
         
-        self.effectsWrapperView.layer.borderColor = UIColor.blueColor().CGColor
-        self.effectsWrapperView.layer.borderWidth = 2.0
         self.effectsWrapperView.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(self.effectsWrapperView)
         
-        for effect in self.effects {
+        for effect in self.filter.effects {
             self.addEffectControl(effect)
         }
         
         self.setupConstraints()
     }
     
-    var effectViews: [UIView] = []
+    var effectViews: [EffectView] = []
+    weak var mainMenuController: MainMenuVC!
     func addEffectControl(effect: Effect) {
-        let view = UISlider()
+        let view = EffectView()
+        
+        view.effectDelegate = self.mainMenuController
+        view.effect = effect
         view.translatesAutoresizingMaskIntoConstraints = false
         
         self.effectsWrapperView.addSubview(view)
@@ -53,11 +40,21 @@ class FilterControlsViewController: UIViewController {
             self.attachViewTop(view, toBottomOf: last)
         }
         
-        self.setHeight(view, height: 80)
         self.maximizeHorizontally(view)
-        	
         
         self.effectViews.append(view)
+    }
+    
+    func reset() {
+        for view: EffectView in self.effectViews {
+            view.reset()
+        }
+    }
+    
+    var filter: Filter {
+        get {
+            return self.mainMenuController.currentFilter
+        }
     }
     
     func setupConstraints() {
@@ -71,7 +68,7 @@ class FilterControlsViewController: UIViewController {
     }
 }
 
-extension FilterControlsViewController {
+extension FilterControlsVC {
     func setHeight(view: UIView, height: CGFloat) {
         self.effectsWrapperView.addConstraint(NSLayoutConstraint(item: view, attribute: .Height, relatedBy: .Equal, toItem: nil, attribute: .NotAnAttribute, multiplier: 1, constant: height))
     }
@@ -86,7 +83,7 @@ extension FilterControlsViewController {
     }
     
     func attachViewTop(view: UIView, toTopOf otherView: UIView) {
-        self.effectsWrapperView.addConstraint(NSLayoutConstraint(item: view, attribute: .Top, relatedBy: .Equal, toItem: otherView, attribute: .Bottom, multiplier: 1, constant: 0))
+        self.effectsWrapperView.addConstraint(NSLayoutConstraint(item: view, attribute: .Top, relatedBy: .Equal, toItem: otherView, attribute: .Top, multiplier: 1, constant: 0))
     }
     
     func attachViewBottom(view: UIView, toBottomOf otherView: UIView) {

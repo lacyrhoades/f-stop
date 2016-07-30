@@ -1,5 +1,5 @@
 //
-//  MainMenuViewController.swift
+//  MainMenuVC.swift
 //  grayscale
 //
 //  Created by Lacy Rhoades on 7/28/16.
@@ -8,7 +8,7 @@
 
 import UIKit
 
-class MainMenuViewController: UIViewController {
+class MainMenuVC: UIViewController {
     var scrollView = UIScrollView()
     
     // background
@@ -26,15 +26,21 @@ class MainMenuViewController: UIViewController {
     var blankView = UIView()
     
     // pull-up menu
-    var configVC = FilterControlsViewController()
+    var configVC = FilterControlsVC()
     var configView: UIView! {
         get {
             return self.configVC.view
         }
     }
     
+    var rawImage: UIImage? = nil
+    var currentFilter: Filter!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        self.currentFilter = self.blankFilter()
+        self.configVC.mainMenuController = self
         
         self.view.backgroundColor = UIColor.blackColor()
         
@@ -42,6 +48,7 @@ class MainMenuViewController: UIViewController {
         self.backgroundImage.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(self.backgroundImage)
         
+        self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.bounces = false
         self.scrollView.pagingEnabled = true
         self.scrollView.delegate = self
@@ -119,6 +126,10 @@ class MainMenuViewController: UIViewController {
         self.scrollToCenter(false)
         
         self.unlock()
+        
+        if self.backgroundImage.image == nil {
+            self.galleryVC.loadFirstImage()
+        }
     }
     
     override func prefersStatusBarHidden() -> Bool {
@@ -134,7 +145,7 @@ class MainMenuViewController: UIViewController {
     }
 }
 
-extension MainMenuViewController: UIScrollViewDelegate {
+extension MainMenuVC: UIScrollViewDelegate {
     func scrollViewDidEndDecelerating(scrollView: UIScrollView) {
         if scrollView.contentOffset.y == 0.0 {
             self.lock()
@@ -142,7 +153,7 @@ extension MainMenuViewController: UIScrollViewDelegate {
     }
 }
 
-extension MainMenuViewController: EmbeddedScrollViewDelegate {
+extension MainMenuVC: EmbeddedScrollViewDelegate {
     func lock() {
         self.scrollView.scrollEnabled = false
     }
@@ -164,11 +175,45 @@ extension MainMenuViewController: EmbeddedScrollViewDelegate {
 
 }
 
-extension MainMenuViewController: GalleryPhotoSelectionDelegate {
+extension MainMenuVC: GalleryPhotoSelectionDelegate {
     func imageWasSelected(image: UIImage) {
+        self.rawImage = image
         self.scrollToCenter(true)
         main_thread {
             self.backgroundImage.image = image
+            self.currentFilter = self.blankFilter()
+            self.applyFilter(self.currentFilter)
+            self.configVC.reset()
         }
+    }
+}
+
+extension MainMenuVC: EffectViewDelegate {
+    func changeEffect(type: EffectType, toValue val: Float) {
+        self.currentFilter = self.currentFilter.changeEffect(type, toValue: val)
+        self.applyFilter(self.currentFilter)
+    }
+}
+
+extension MainMenuVC {
+
+    func applyFilter(filter: Filter) {
+        guard let image = self.rawImage else {
+            print("no raw image")
+            return
+        }
+        
+        background_thread {
+            let filtered = ImageFilterApplier.applyFilter(filter, toImage: image)
+            main_thread {
+                self.backgroundImage.image = filtered
+            }
+        }
+    }
+}
+
+extension MainMenuVC {
+    func blankFilter() -> Filter {
+        return Filter()
     }
 }
